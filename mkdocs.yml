@@ -5,6 +5,10 @@ repo_name: df-npy
 theme:
   name: material
 
+extra:
+  version:
+    provider: mike
+
 nav:
   - Home: index.md
   - Usage:
