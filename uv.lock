@@ -51,7 +51,7 @@ wheels = [
 
 [[package]]
 name = "df-npy"
-version = "0.2.0"
+version = "0.2.1"
 source = { editable = "." }
 dependencies = [
     { name = "loguru" },
@@ -73,7 +73,7 @@ dev = [
 requires-dist = [
     { name = "loguru", specifier = ">=0.7.3" },
     { name = "numpy", specifier = ">=2.5.0" },
-    { name = "pandas", specifier = ">=3.0.3" },
+    { name = "pandas", specifier = ">=2.0.0" },
 ]
 
 [package.metadata.requires-dev]
