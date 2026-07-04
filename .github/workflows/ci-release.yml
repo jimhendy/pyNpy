@@ -1,0 +1,140 @@
+name: CI and Release
+
+on:
+  pull_request:
+  push:
+    branches:
+      - "**"
+  workflow_dispatch:
+
+jobs:
+  quality:
+    name: Lint, Typecheck, Test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v6
+
+      - name: Sync dependencies
+        run: uv sync --group dev
+
+      - name: Ruff lint
+        run: uv run ruff check
+
+      - name: Ruff format check
+        run: uv run ruff format --check
+
+      - name: Type check
+        run: uv run ty check
+
+      - name: Test
+        run: uv run python -m pytest -q
+
+  docs:
+    name: Build and Publish Docs
+    needs: quality
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v6
+
+      - name: Sync dependencies
+        run: uv sync --group dev
+
+      - name: Build docs
+        run: uv run zensical build
+
+      - name: Deploy to gh-pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_branch: gh-pages
+          publish_dir: ./site
+          force_orphan: true
+
+  pypi:
+    name: Publish to PyPI (if new version)
+    needs: quality
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v6
+
+      - name: Sync dependencies
+        run: uv sync --group dev
+
+      - name: Build package
+        run: uv build
+
+      - name: Check if version already exists on PyPI
+        id: version_check
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          import pathlib
+          import tomllib
+          import urllib.error
+          import urllib.request
+
+          pyproject = tomllib.loads(pathlib.Path("pyproject.toml").read_text())
+          name = pyproject["project"]["name"]
+          version = pyproject["project"]["version"]
+          exists = False
+
+          url = f"https://pypi.org/pypi/{name}/json"
+          try:
+              with urllib.request.urlopen(url, timeout=15) as response:
+                  payload = json.load(response)
+              releases = payload.get("releases", {})
+              exists = version in releases and bool(releases.get(version))
+          except urllib.error.HTTPError as exc:
+              if exc.code != 404:
+                  raise
+
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as f:
+              f.write(f"package_name={name}\n")
+              f.write(f"package_version={version}\n")
+              f.write(f"version_exists={str(exists).lower()}\n")
+          PY
+
+      - name: Publish to PyPI with uv (OIDC)
+        if: steps.version_check.outputs.version_exists != 'true'
+        run: uv publish --trusted-publishing always dist/*
+
+      - name: Report skipped publish
+        if: steps.version_check.outputs.version_exists == 'true'
+        run: |
+          echo "PyPI publish skipped."
+          echo "version_exists=${{ steps.version_check.outputs.version_exists }}"

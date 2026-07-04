@@ -1,0 +1,28 @@
+site_name: df-npy
+site_description: DataFrame serialization to NumPy with metadata
+repo_name: df-npy
+
+theme:
+  name: material
+
+nav:
+  - Home: index.md
+  - Usage:
+      - Quickstart: usage/quickstart.md
+      - Performance: usage/performance.md
+  - API: api.md
+
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          options:
+            show_source: false
+            show_root_heading: true
+            members_order: source
+
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences
