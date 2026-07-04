@@ -28,28 +28,28 @@ def is_string_dtype(dtype: object) -> bool:
         return pd.api.types.is_string_dtype(dtype) or pd.api.types.is_object_dtype(
             dtype,
         )
-    except TypeError, ValueError:
+    except (TypeError, ValueError):
         return str(dtype) in STRING_DTYPE_NAMES
 
 
 def is_numeric_dtype(dtype: object) -> bool:
     try:
         return pd.api.types.is_numeric_dtype(dtype)
-    except TypeError, ValueError:
+    except (TypeError, ValueError):
         return False
 
 
 def is_integer_dtype(dtype: object) -> bool:
     try:
         return pd.api.types.is_integer_dtype(dtype)
-    except TypeError, ValueError:
+    except (TypeError, ValueError):
         return False
 
 
 def is_float_dtype(dtype: object) -> bool:
     try:
         return pd.api.types.is_float_dtype(dtype)
-    except TypeError, ValueError:
+    except (TypeError, ValueError):
         return False
 
 

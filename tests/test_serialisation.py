@@ -1,7 +1,7 @@
 import pandas as pd
 import pytest
 
-from df_npy import NpySerializer
+from df_npy import NpySerializer, get_columns
 
 TEST_DF_WIDTH = 2
 TEST_DF_LENGTH = 3
@@ -72,3 +72,27 @@ class TestUnsupportedTypes:
             ValueError, match="Pickle-backed object serialization is disabled"
         ):
             NpySerializer.to_npy(df, file_path)
+
+
+def test_get_columns_top_level_returns_string_set(tmp_path):
+    df = pd.DataFrame({"a": [1, 2], 2: [3, 4], "c": [5, 6]})
+    file_path = tmp_path / "test.npy"
+
+    NpySerializer.to_npy(df, file_path)
+
+    assert get_columns(file_path) == {"a", "2", "c"}
+
+
+def test_serializer_get_columns_raises_on_missing_columns_metadata(tmp_path):
+    df = pd.DataFrame({"a": [1, 2, 3]})
+    file_path = tmp_path / "test.npy"
+    metadata_path = file_path.with_suffix(".json")
+
+    NpySerializer.to_npy(df, file_path)
+    metadata = metadata_path.read_text(encoding="utf-8")
+    metadata_path.write_text(
+        metadata.replace('"columns":', '"_columns":'), encoding="utf-8"
+    )
+
+    with pytest.raises(ValueError, match="Metadata is missing required key: columns"):
+        NpySerializer.get_columns(file_path)

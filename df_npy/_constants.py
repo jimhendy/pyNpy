@@ -1,7 +1,11 @@
-from enum import StrEnum
+from enum import Enum
 
 
-class MetadataKey(StrEnum):
+class _StrEnum(str, Enum):
+    pass
+
+
+class MetadataKey(_StrEnum):
     COLUMNS = "columns"
     INDEX = "index"
     DTYPE = "dtype"
@@ -11,7 +15,7 @@ class MetadataKey(StrEnum):
     ORDER = "order"
 
 
-class AxisMetaKey(StrEnum):
+class AxisMetaKey(_StrEnum):
     TYPE = "type"
     NAME = "name"
     RANGE = "range"
@@ -32,7 +36,7 @@ class AxisMetaKey(StrEnum):
     NLEVELS = "nlevels"
 
 
-class AxisType(StrEnum):
+class AxisType(_StrEnum):
     MULTIINDEX = "multiindex"
 
 

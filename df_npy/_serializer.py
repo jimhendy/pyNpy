@@ -17,6 +17,22 @@ from ._paths import ensure_npy_path, metadata_file_from_npy_file
 
 class NpySerializer:
     @classmethod
+    def get_columns(cls, file_path: Path | str) -> set[str]:
+        """Return serialized DataFrame columns as a set of strings."""
+        path = ensure_npy_path(file_path, for_write=False)
+        logger.info(f"Reading columns metadata from {path}")
+        if not path.exists():
+            raise FileNotFoundError(path)
+
+        metadata_path = metadata_file_from_npy_file(path)
+        metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
+        if MetadataKey.COLUMNS.value not in metadata:
+            raise ValueError("Metadata is missing required key: columns")
+
+        columns = deserialise_axis(metadata[MetadataKey.COLUMNS.value])
+        return {str(column) for column in columns}
+
+    @classmethod
     def to_npy(cls, df: pd.DataFrame, file_path: Path | str) -> None:
         path = ensure_npy_path(file_path, for_write=True)
         if not df.columns.is_unique:
