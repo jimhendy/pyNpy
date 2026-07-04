@@ -5,13 +5,11 @@ build-backend = "hatchling.build"
 [project]
 name = "df-npy"
 version = "0.2.0"
-requires-python = ">=3.10"
+requires-python = ">=3.12"
 dependencies = [
     "loguru>=0.7.3",
-    "numpy>=1.26.0; python_version < '3.12'",
-    "numpy>=2.5.0; python_version >= '3.12'",
-    "pandas>=2.2.0; python_version < '3.12'",
-    "pandas>=3.0.3; python_version >= '3.12'",
+    "numpy>=2.5.0",
+    "pandas>=3.0.3",
 ]
 
 [dependency-groups]

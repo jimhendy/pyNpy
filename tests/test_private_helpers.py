@@ -111,7 +111,7 @@ def test_restore_column_dtypes_preserves_unsigned_nullable_integer():
 
 
 def test_extract_dtype_plan_handles_non_string_column_label_collision():
-    df = pd.DataFrame(np.array([[1, 2], [3, 4]]), columns=[1, "1"])
+    df = pd.DataFrame(np.array([[1, 2], [3, 4]]), columns=pd.Index([1, "1"]))
 
     plan = extract_dtype_plan(df)
 

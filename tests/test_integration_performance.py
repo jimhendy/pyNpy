@@ -17,7 +17,7 @@ pytestmark = [pytest.mark.integration, pytest.mark.performance]
 def _make_large_dataframe(rows: int = 80_000, cols: int = 64) -> pd.DataFrame:
     rng = np.random.default_rng(42)
     data = rng.normal(size=(rows, cols)).astype(np.float64)
-    columns = [f"col_{i:03d}" for i in range(cols)]
+    columns = pd.Index([f"col_{i:03d}" for i in range(cols)])
     return pd.DataFrame(data, columns=columns)
 
 
