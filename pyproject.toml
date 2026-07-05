@@ -12,6 +12,13 @@ dependencies = [
     "pandas>=2.0.0",
 ]
 
+[project.optional-dependencies]
+benchmark = [
+    "matplotlib>=3.10.5",
+    "pyarrow>=18.0.0",
+    "tables>=3.10.2",
+]
+
 [dependency-groups]
 dev = [
     "mike>=2.1.3",
