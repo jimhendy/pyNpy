@@ -146,24 +146,37 @@ def restore_column_dtypes(df: pd.DataFrame, column_dtypes: list[str]) -> pd.Data
             "column_dtypes length does not match DataFrame columns length.",
         )
 
+    # Fast path: avoid per-column recasting when all dtypes already match.
+    current_dtypes = [str(dtype) for dtype in df.dtypes]
+    if current_dtypes == column_dtypes:
+        return df
+
+    grouped_columns: dict[str, list[object]] = {}
     for position, column in enumerate(df.columns):
-        dtype_name = column_dtypes[position]
-        series = df[column]
+        grouped_columns.setdefault(column_dtypes[position], []).append(column)
+
+    for dtype_name, columns in grouped_columns.items():
         if dtype_name.startswith(("int", "uint")):
-            if series.isna().any():
+            na_columns = df[columns].isna().any(axis=0)
+            with_na = [column for column, has_na in na_columns.items() if has_na]
+            without_na = [column for column in columns if column not in with_na]
+
+            if without_na:
+                numeric = df[without_na].apply(pd.to_numeric, errors="raise")
+                df[without_na] = numeric.astype(dtype_name)
+
+            if with_na:
                 nullable_dtype = _nullable_integer_dtype(dtype_name)
-                df[column] = pd.to_numeric(series, errors="coerce").astype(
-                    nullable_dtype,
-                )
-            else:
-                df[column] = pd.to_numeric(series, errors="raise").astype(dtype_name)
+                numeric = df[with_na].apply(pd.to_numeric, errors="coerce")
+                df[with_na] = numeric.astype(nullable_dtype)
         elif dtype_name.startswith("float"):
-            df[column] = pd.to_numeric(series, errors="coerce").astype(dtype_name)
+            numeric = df[columns].apply(pd.to_numeric, errors="coerce")
+            df[columns] = numeric.astype(dtype_name)
         elif dtype_name == PANDAS_BOOL_DTYPE:
-            df[column] = series.astype(PANDAS_BOOL_DTYPE)
+            df[columns] = df[columns].astype(PANDAS_BOOL_DTYPE)
         elif dtype_name == PANDAS_NULLABLE_BOOL_DTYPE:
-            df[column] = series.astype(PANDAS_NULLABLE_BOOL_DTYPE)
+            df[columns] = df[columns].astype(PANDAS_NULLABLE_BOOL_DTYPE)
         else:
-            df[column] = series.astype(dtype_name)
+            df[columns] = df[columns].astype(dtype_name)
 
     return df

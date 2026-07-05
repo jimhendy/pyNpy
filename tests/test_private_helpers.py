@@ -110,6 +110,30 @@ def test_restore_column_dtypes_preserves_unsigned_nullable_integer():
     assert str(restored["a"].dtype) == "UInt64"
 
 
+def test_restore_column_dtypes_is_noop_when_dtypes_already_match():
+    df = pd.DataFrame({"a": [1.1, 2.2], "b": [3.3, 4.4]}, dtype="float64")
+
+    restored = restore_column_dtypes(df, ["float64", "float64"])
+
+    assert restored is df
+
+
+def test_restore_column_dtypes_groups_same_target_dtype_columns():
+    df = pd.DataFrame(
+        {
+            "a": [1.0, 2.0, 3.0],
+            "b": [4.0, 5.0, 6.0],
+            "c": [1.1, 2.2, 3.3],
+        },
+    )
+
+    restored = restore_column_dtypes(df, ["int64", "int64", "float64"])
+
+    assert str(restored["a"].dtype) == "int64"
+    assert str(restored["b"].dtype) == "int64"
+    assert str(restored["c"].dtype) == "float64"
+
+
 def test_extract_dtype_plan_handles_non_string_column_label_collision():
     df = pd.DataFrame(np.array([[1, 2], [3, 4]]), columns=pd.Index([1, "1"]))
 
