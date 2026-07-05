@@ -37,6 +37,12 @@ PARAMETERISED_INDICES = [
         pd.date_range("2023-01-01", periods=3, tz="Europe/London"),
     ),
     ("range", pd.RangeIndex(start=5, stop=20, step=5)),
+    (
+        "multiindex",
+        pd.MultiIndex.from_tuples(
+            [("A", 1), ("A", 2), ("B", 1)], names=["letter", "number"]
+        ),
+    ),
 ]
 
 
@@ -96,3 +102,37 @@ def test_serializer_get_columns_raises_on_missing_columns_metadata(tmp_path):
 
     with pytest.raises(ValueError, match="Metadata is missing required key: columns"):
         NpySerializer.get_columns(file_path)
+
+
+def test_serializer_multiindex_multicolumn(tmp_path):
+    index = pd.MultiIndex.from_tuples(
+        [("A", 1), ("A", 2), ("B", 1)], names=["letter", "number"]
+    )
+    columns = pd.MultiIndex.from_tuples(
+        [("X", "x"), ("X", "y"), ("Y", "z")], names=["group", "subgroup"]
+    )
+    df = pd.DataFrame([[1, 2, 3], [4, 5, 6], [7, 8, 9]], index=index, columns=columns)
+
+    file_path = tmp_path / "test.npy"
+    NpySerializer.to_npy(df, file_path)
+    deserialized = NpySerializer.from_npy(file_path)
+
+    pd.testing.assert_frame_equal(df, deserialized)
+
+
+def test_serializer_multiindex_multicolumn_with_dates(tmp_path):
+    dates = pd.date_range("2023-01-01", periods=3)
+    index = pd.MultiIndex.from_tuples(
+        [(date, i) for i, date in enumerate(dates)],
+        names=["date", "number"],
+    )
+
+    df = pd.DataFrame(
+        [[1.0, 2.0, 3.0], [4.0, 5.0, 6.0], [7.0, 8.0, 9.0]], index=index, columns=index
+    )
+
+    file_path = tmp_path / "test.npy"
+    NpySerializer.to_npy(df, file_path)
+    deserialized = NpySerializer.from_npy(file_path)
+
+    pd.testing.assert_frame_equal(df, deserialized)
