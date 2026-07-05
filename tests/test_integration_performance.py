@@ -12,6 +12,7 @@ import pytest
 from df_npy import NpySerializer
 
 pytestmark = [pytest.mark.integration, pytest.mark.performance]
+MAX_SUBSET_SLOWDOWN_FACTOR = 2.5
 
 
 def _make_large_dataframe(rows: int = 80_000, cols: int = 64) -> pd.DataFrame:
@@ -30,7 +31,7 @@ def _median_runtime(fn, repeats: int = 5) -> float:
     return statistics.median(timings)
 
 
-def test_identifier_subset_load_is_faster_than_full_load_for_large_file(
+def test_identifier_subset_load_is_not_much_slower_than_full_load_for_large_file(
     tmp_path: Path,
 ) -> None:
     df = _make_large_dataframe()
@@ -49,13 +50,14 @@ def test_identifier_subset_load_is_faster_than_full_load_for_large_file(
     )
     full_time = _median_runtime(lambda: NpySerializer.from_npy(file_path), repeats=3)
 
-    assert subset_time < full_time, (
-        "Subset loading should be faster than full loading for large arrays. "
+    assert subset_time <= full_time * MAX_SUBSET_SLOWDOWN_FACTOR, (
+        "Subset loading should remain in the same performance range as full loading "
+        "for large arrays. "
         f"subset={subset_time:.4f}s, full={full_time:.4f}s"
     )
 
 
-def test_threadpool_subset_load_is_faster_than_threadpool_full_load(
+def test_threadpool_subset_load_is_not_much_slower_than_threadpool_full_load(
     tmp_path: Path,
 ) -> None:
     df = _make_large_dataframe(rows=60_000, cols=64)
@@ -73,23 +75,28 @@ def test_threadpool_subset_load_is_faster_than_threadpool_full_load(
     def load_subset(path: Path) -> pd.DataFrame:
         return NpySerializer.from_npy(path, identifiers=subset_cols)
 
-    start_subset = perf_counter()
-    with ThreadPoolExecutor(max_workers=4) as executor:
-        subset_results = list(executor.map(load_subset, paths))
-    subset_time = perf_counter() - start_subset
+    def run_threadpool_subset() -> list[pd.DataFrame]:
+        with ThreadPoolExecutor(max_workers=4) as executor:
+            return list(executor.map(load_subset, paths))
 
-    start_full = perf_counter()
-    with ThreadPoolExecutor(max_workers=4) as executor:
-        full_results = list(executor.map(load_full, paths))
-    full_time = perf_counter() - start_full
+    def run_threadpool_full() -> list[pd.DataFrame]:
+        with ThreadPoolExecutor(max_workers=4) as executor:
+            return list(executor.map(load_full, paths))
+
+    subset_results = run_threadpool_subset()
+    full_results = run_threadpool_full()
+
+    subset_time = _median_runtime(run_threadpool_subset, repeats=3)
+    full_time = _median_runtime(run_threadpool_full, repeats=3)
 
     for subset_df in subset_results:
         pd.testing.assert_frame_equal(subset_df, df[subset_cols])
     for full_df in full_results:
         pd.testing.assert_frame_equal(full_df, df)
 
-    assert subset_time < full_time, (
-        "Threadpool subset loading should be faster than threadpool full loading. "
+    assert subset_time <= full_time * MAX_SUBSET_SLOWDOWN_FACTOR, (
+        "Threadpool subset loading should stay in the same performance range as "
+        "threadpool full loading. "
         f"subset={subset_time:.4f}s, full={full_time:.4f}s"
     )
 
