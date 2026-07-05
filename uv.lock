@@ -155,7 +155,7 @@ wheels = [
 
 [[package]]
 name = "df-npy"
-version = "0.2.3"
+version = "0.2.4"
 source = { editable = "." }
 dependencies = [
     { name = "loguru" },
